@@ -1,90 +1,120 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ChipComponent.css';
+import jsonData from './data.json';
 
 const ChipComponent = () => {
-  const [inputValue, setInputValue] = useState('');
   const [chips, setChips] = useState([]);
+  const [inputValue, setInputValue] = useState('');
   const [filteredItems, setFilteredItems] = useState([]);
   const inputRef = useRef(null);
 
-  const items = [
-    'John Doe',
-    'John Cena',
-    'Dani Daniels',
-    'Nick Giannopoulos',
-    'Nicky Dandelion',
-    'Alice Smith',
-  ];
+  const items = jsonData.map((item) => ({
+    id: item.id,
+    label: item.first_name, 
+    email: item.email,
+    image: item.image,
+  }));
+
+  useEffect(() => {
+    let isFirstBackspace = true;
+    const handleBackspace = (event) => {
+      if (event.key === 'Backspace' && inputValue === '' && chips.length > 0) {
+        if(chips.length === 1 && isFirstBackspace){
+            alert(`Press again to delete the last chip : ${chips[chips.length - 1].label}`);
+            isFirstBackspace = false;
+            return;
+        }
+        handleRemoveChip(chips[chips.length - 1]);
+      }
+    };
+
+    document.addEventListener('keydown', handleBackspace);
+
+    return () => {
+      document.removeEventListener('keydown', handleBackspace);
+    };
+  }, [inputValue, chips]);
+
+  const filterItems = (value) => {
+    const lowercasedValue = value.toLowerCase();
+    const filtered = items.filter(
+      (item) =>
+        item.label.toLowerCase().includes(lowercasedValue) &&
+        !chips.some((chip) => chip.id === item.id)
+    );
+    setFilteredItems(filtered);
+  };
 
   const handleInputChange = (event) => {
     const value = event.target.value;
     setInputValue(value);
-
-    // Filter items excluding those already selected as chips
-    setFilteredItems(items.filter((item) => 
-      !chips.some((chip) => chip.label.toLowerCase() === item.toLowerCase())
-        && item.toLowerCase().includes(value.toLowerCase())
-    ));
+    filterItems(value);
   };
 
   const handleItemClick = (item) => {
-    setChips((prevChips) => [...prevChips, { id: Date.now(), label: item }]);
+    setChips([...chips, item]);
     setInputValue('');
-    setFilteredItems(filteredItems.filter((filteredItem) => filteredItem !== item));
+    setFilteredItems([]);
   };
 
-  const handleRemoveChip = (chipId) => {
-    setChips((prevChips) => prevChips.filter((chip) => chip.id !== chipId));
+  const handleRemoveChip = (chipToRemove) => {
+    setChips((prevChips) => prevChips.filter((chip) => chip.id !== chipToRemove.id));
+    setFilteredItems((prevItems) => [...prevItems, chipToRemove]);
+    
   };
 
-  const handleInputKeyDown = (event) => {
-    if (event.key === 'Backspace' && inputValue === '' && chips.length > 0) {
-      inputRef.current?.blur();
-      const lastChip = chips[chips.length - 1];
-      alert(`Selected chip: ${lastChip.label}`);
-      handleRemoveChip(lastChip.id);
-
-      // Remove the last chip from the filtered items
-      setFilteredItems((prevFilteredItems) => [
-        ...prevFilteredItems,
-        lastChip.label,
-      ]);
-    }
+  const handleSearchBarClick = () => {
+    filterItems(inputValue);
   };
 
   useEffect(() => {
-    if (inputValue === '' && filteredItems.length === 0 && chips.length > 0) {
-      handleRemoveChip(chips[chips.length - 1].id);
-    }
-  }, [inputValue, filteredItems, chips]);
+    const handleDocumentClick = (event) => {
+      if (!inputRef.current.contains(event.target)) {
+        setFilteredItems([]);
+      }
+    };
+
+    document.addEventListener('click', handleDocumentClick);
+
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, []);
 
   return (
     <div className="chip-container">
       <div className="chips">
         {chips.map((chip) => (
           <div key={chip.id} className="chip">
+            <img src={chip.image} alt={chip.label} className="chip-image" />
             {chip.label}
-            <span className="remove-icon" onClick={() => handleRemoveChip(chip.id)}>
-              x
+            <span className="remove-icon" onClick={() => handleRemoveChip(chip)}>
+              X
             </span>
           </div>
         ))}
+        
       </div>
       <input
         ref={inputRef}
         type="text"
         value={inputValue}
         onChange={handleInputChange}
-        onKeyDown={handleInputKeyDown}
-        placeholder="Type here..."
+        onClick={handleSearchBarClick}
+        className="chip-input"
+        placeholder="Add new users..."
       />
-      <ul className="item-list">
-        {filteredItems.map((item) => (
-          <li key={item} onClick={() => handleItemClick(item)}>
-            {item}
-          </li>
-        ))}
-      </ul>
+      {filteredItems.length > 0 && (
+        <ul className="item-list">
+          {filteredItems.map((item) => (
+            <li key={item.id} onClick={() => handleItemClick(item)}>
+              <img src={item.image} alt={item.label} className="chip-image" />
+              {item.label}
+              <span className="email">{item.email}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };

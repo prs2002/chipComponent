@@ -4,9 +4,16 @@ body {
 }
 
 .container {
-  max-width: 400px;
-  margin: 50px auto;
+  display: flex;
+  justify-content: center;
+  height: 100vh; /* Optional: Adjust the height based on your design */
 }
+
+.center-container {
+  padding-top: 3%;
+  text-align: center;
+}
+
 
 input {
   width: 100%;
